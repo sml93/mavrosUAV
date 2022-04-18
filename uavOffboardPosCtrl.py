@@ -10,9 +10,12 @@ import numpy as np
 
 from geometry_msgs.msg import PoseStamped, Quaternion
 from mavros_test_common import MavrosTestCommon
-from pymavlink import mavutil
+from mavros_msgs.msg import ParamValue
 from std_msgs.msg import Header
+from pymavlink import mavutil
+from six.moves import xrange
 from threading import Thread
+
 from tf.transformations import quaternion_from_euler
 
 
@@ -65,14 +68,12 @@ class OffboardPosCtrl(MavrosTestCommon):
             "current position | x:{0:.2f}, y{1:.2f}, z{2:.2f}".format(
                 self.local_position.pose.position.x,
                 self.local_position.pose.position.y,
-                self.local_position.pose.position.z
-                )
-        )
+                self.local_position.pose.position.z))
 
         desired = np.array((x, y, z))
         pos = np.array((self.local_position.pose.position.x,
-        self.local_position.pose.position.y,
-        self.local_position.pose.position.z))
+                        self.local_position.pose.position.y,
+                        self.local_position.pose.position.z))
         return np.linalg.norm(desired - pos) < offset
 
     def reach_position(self, x, y, z, timeout):
@@ -100,8 +101,8 @@ class OffboardPosCtrl(MavrosTestCommon):
         reached = False
         for i in xrange(timeout * loop_freq):
             if self.is_at_position(self.pos.pose.position.x,
-            self.pos.pose.position.y,
-            self.pos.pose.position.z, self.radius):
+                                   self.pos.pose.position.y,
+                                   self.pos.pose.position.z, self.radius):
                 rospy.loginfo("position reached | seconds: {0} of {1}".format(
                 i / loop_freq, timeout))
                 reached = True
@@ -113,9 +114,10 @@ class OffboardPosCtrl(MavrosTestCommon):
                 self.fail(e)
 
         self.assertTrue(reached, (
-            "took too long to get into position | current position x:{0:.2f}, y:{1:.2f}, z:{2:.2f} | timeout(seconds): {3}".format(self.local_position.pose.position.x,
-            self.local_position.pose.position.y,
-            self.local_position.pose.position.z, timeout)))
+            "took too long to get into position | current position x:{0:.2f}, y:{1:.2f}, z:{2:.2f} | timeout(seconds): {3}".
+            format(self.local_position.pose.position.x,
+                   self.local_position.pose.position.y,
+                   self.local_position.pose.position.z, timeout)))
 
     ###
     # Test method
@@ -129,8 +131,10 @@ class OffboardPosCtrl(MavrosTestCommon):
         self.wait_for_topics(60)
         self.wait_for_landed_state(mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND, 10, -1)
         self.log_topic_vars()
-        self.set_mode("OFFBOARD", 5) # to change to the desired mode
-        self.set_arm(True, 5) # arming the UAV
+        rcl_except = ParamValue(1<<2, 0.0)
+        self.set_param("COM_RCL_EXCEPT", rcl_except, 5)
+        self.set_mode("OFFBOARD", 5)    # to change to the desired mode
+        self.set_arm(True, 5)           # arming the UAV
 
         rospy.loginfo("running mission")
         
@@ -140,8 +144,8 @@ class OffboardPosCtrl(MavrosTestCommon):
         
         for i in xrange(len(positions)):
             self.reach_position(positions[i][0],
-            positions[i][1],
-            positions[i][2], 45)
+                                positions[i][1],
+                                positions[i][2], 45)
             
         self.set_mode("AUTO.LAND", 5)
         self.wait_for_landed_state(mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND, 45, 0)
